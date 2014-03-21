@@ -19,7 +19,6 @@ class ModelPaymentGocoin extends Model {
               ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1";
         
        	$query = $this->db->query($sql); 
-        
     }
     
   	public function getMethod($address, $total) {

@@ -8,7 +8,12 @@ class ControllerPaymentGocoin extends Controller {
 		$this->document->setTitle($this->language->get('heading_title'));
 		
 		$this->load->model('setting/setting');
-			
+		   if (isset($this->request->server['HTTPS']) && (($this->request->server['HTTPS'] == 'on') || ($this->request->server['HTTPS'] == '1'))) {
+         $this->data['base'] = $this->config->get('config_ssl');
+      } else {
+         $this->data['base'] = $this->config->get('config_url');
+      }	
+    
 		if (($this->request->server['REQUEST_METHOD'] == 'POST') && $this->validate()) {
 			$this->model_setting_setting->editSetting('gocoin', $this->request->post);				
 			

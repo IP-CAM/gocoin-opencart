@@ -1,5 +1,7 @@
 <?php
 
+include_once  DIR_SYSTEM . 'library/gocoinlib/src/GoCoin.php';
+
 class ControllerPaymentGocoin extends Controller {
 
     var $pay_url = 'https://gateway.gocoin.com/merchant/';
@@ -10,10 +12,6 @@ class ControllerPaymentGocoin extends Controller {
         $this->load->model('checkout/order');
 
         $order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
-
-        //$this->data['action'] = 'https://www.2checkout.com/checkout/purchase';
-        $this->data['action'] = $this->url->link('payment/gocoin/processorder', '', '');
-        ;
 
         $this->data['currency_code'] = $order_info['currency_code'];
         $this->data['total'] = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false);
@@ -66,8 +64,6 @@ class ControllerPaymentGocoin extends Controller {
         $this->data['display'] = 'Y';
         $this->data['lang'] = $this->session->data['language'];
 
-//		$this->data['return_url'] = $this->url->link('payment/twocheckout/callback', '', 'SSL');
-
         if (file_exists(DIR_TEMPLATE . $this->config->get('config_template') . '/template/payment/gocoin.tpl')) {
             $this->template = $this->config->get('config_template') . '/template/payment/gocoin.tpl';
         } else {
@@ -78,7 +74,7 @@ class ControllerPaymentGocoin extends Controller {
     }
 
     public function processorder() {
-        
+
         $this->load->model('checkout/order');
         $order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
 
@@ -109,15 +105,15 @@ class ControllerPaymentGocoin extends Controller {
         $customer_email = $order_info['email'];
         $customer_phone = $order_info['telephone'];
         $price = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false);
-                    
-                    
+
+
         $options = array(
             'price_currency' => $coin_currency,
             'base_price' => $price,
             'base_price_currency' => "USD", //$order_info['currency_code'],
             'notification_level' => "all",
             'callback_url' => $this->url->link('payment/gocoin/callback', '', ''),
-            'redirect_url' =>  $this->url->link('checkout/success', '' , ''),
+            'redirect_url' => $this->url->link('checkout/success', '', ''),
             'order_id' => $this->session->data['order_id'],
             'customer_name' => $customer_name,
             'customer_address_1' => $customer_address_1,
@@ -129,172 +125,166 @@ class ControllerPaymentGocoin extends Controller {
             'customer_phone' => $customer_phone,
             'customer_email' => $customer_email,
         );
-        $data_string = json_encode($options);
-        
-        $merchant_id = $this->config->get('gocoin_gocoinmerchant');
-        $gocoin_access_key = $this->config->get('gocoin_gocoinsecretkey');
-        $gocoin_token       =   $this->config->get('gocoin_gocointoken');
+        //$data_string = json_encode($options);
+
+        $client_id = $this->config->get('gocoin_gocoinmerchant');
+        $client_secret = $this->config->get('gocoin_gocoinsecretkey');
+        $access_token = $this->config->get('gocoin_gocointoken');
         $gocoin_url = $this->pay_url;
 
 
-        $arr = array(
-            'client_id' => $merchant_id,
-            'client_secret' => $gocoin_access_key,
-            'scope' => "user_read_write+merchant_read_write+invoice_read_write",);
+        $json = array();
+        $result = 'error';
 
-
-        include DIR_SYSTEM . 'library/gocoinlib/src/client.php';
-        $client = new Client($arr);
-        $client->setToken($gocoin_token);
-        if (!$client) {
+        if (empty($client_id) || empty($client_secret) || empty($access_token)) {
             $result = 'error';
-            $json['error'] = 'GoCoin does not permit';
-            
-        }
-        $user = $client->api->user->self();
-        if (!$user) {
-            $result = 'error';
-           $json['error'] = 'GoCoin does not permit';
-             
+            $json['error'] = 'GoCoin Payment Paramaters not Set. Please report this to Site Administrator.';
         } else {
-            $invoice_params = array(
-                'id' => $user->merchant_id,
-                'data' => $data_string
-            );
-            if (!$invoice_params) {
-                $result = 'error';
-                $json['error'] = $client->getError();
-            }
-            $invoice = $client->api->invoices->create($invoice_params);
-            
-            if (isset($invoice->errors)) {
-                $result = 'error';
-                $json['error'] = 'GoCoin does not permit';
-            } elseif (isset($invoice->error)) {
+            try {
+                $user = GoCoin::getUser($access_token);
+                if ($user) {
+                    $merchant_id = $user->merchant_id;
+                    if (!empty($merchant_id)) {
+                        $invoice = GoCoin::createInvoice($access_token, $merchant_id, $options);
+                        if (isset($invoice->errors)) {
+                            $result = 'error';
+                            $json['error'] = 'GoCoin does not permit';
+                        } elseif (isset($invoice->error)) {
+                            $result = 'error';
+                            $json['error'] = $invoice->error;
+                        } elseif (isset($invoice->merchant_id) && $invoice->merchant_id != '' && isset($invoice->id) && $invoice->id != '') {
+                            $url = $gocoin_url . $invoice->merchant_id . "/invoices/" . $invoice->id;
+                            $result = 'success';
+                            $messages = 'success';
+                            $json['success'] = $url;
+                        }
+                    }
+                } else {
+                    $result = 'error';
+                    $json['error'] = 'GoCoin Invalid Settings';
+                }
+            } catch (Exception $e) {
                 $result = 'error';
                 $json['error'] = $invoice->error;
-            } elseif (isset($invoice->merchant_id) && $invoice->merchant_id != '' && isset($invoice->id) && $invoice->id != '') {
-                $url = $gocoin_url . $invoice->merchant_id . "/invoices/" . $invoice->id;
-                $result = 'success';
-                $messages = 'success';
-                $redirect = $url;
-            }
-
-            if (isset($result) && $result == 'success' && isset($url)) {
-                $json['success'] =  $url;
-            } else {
-                //$json['error'] = 'GoCoin does not permit';
             }
         }
-        
+
         $this->response->setOutput(json_encode($json));
     }
 
     public function callback() {
-         $this->_paymentStandard();
+        $this->_paymentStandard();
     }
 
-    public function success() {
-        
-    }
-    public function getNotifyData() {
-            $post_data = file_get_contents("php://input");
-            if (!$post_data) {
-                $response = new stdClass();
-                $response->error = 'Post Data Error';
-                return $response;
-            }
-            $response = json_decode($post_data);
-            return $response;
-  }
-  
-  
-	private function _paymentStandard()
-	{
-      $this->load->model('checkout/order');
-      $this->load->model('payment/gocoin');
-      $sts_processing = $this->model_payment_gocoin->getOrderStatus('Processing'); // Processing
-      $sts_failed     = $this->model_payment_gocoin->getOrderStatus('Failed'); // Failed
-                    
-      $module_display = 'gocoin';
-      $response = $this->getNotifyData();
-      if(!$response){
-        //======================Error=============================     
-      }
-      if(isset($response->error) && $response->error!='') {
-         
-      }
-      if(isset($response->payload)){
-        
-        //======================IF Response Get=============================     
-          
-         $event             = $response->event ;          
-         $order_id           = (int) $response->payload->order_id; 
-         $redirect_url      = $response->payload->redirect_url;   
-         $transction_id     = $response->payload->id;  
-         $total             = $response->payload->base_price;  
-         $status            = $response->payload->status;
-         $currency_id       = $response->payload->user_defined_1;
-         $secure_key        = $response->payload->user_defined_2 ;
-         $currency          = $response->payload->base_price_currency;
-         $currency_type     = $response->payload->price_currency;
-         $invoice_time      = $response->payload->created_at   ;      
-         $expiration_time   = $response->payload->expires_at   ;
-         $updated_time      = $response->payload->updated_at   ;
-         $merchant_id       = $response->payload->merchant_id  ;
-         $btc_price         = $response->payload->price  ;  
-         $price             = $response->payload->base_price  ;
-         $url = "https://gateway.gocoin.com/merchant/".$merchant_id ."/invoices/".$transction_id;
-         
-         //=================== Set To Array=====================================//
-         //Used for adding in db
-         $iArray    = array(
-             'order_id'=>$order_id,
-             'invoice_id'=>$transction_id,
-             'url'=>$url,
-             'status'=>$event,
-             'btc_price'=>$btc_price,
-             'price'=>$price,
-             'currency'=>$currency,
-             'currency_type'=>$currency_type,
-             'invoice_time'=>$invoice_time,
-             'expiration_time'=>$expiration_time,
-             'updated_time'=>$updated_time);   
-         
-         
-                switch ($status) {
-                    case 'paid':
-                        $sts = $sts_processing;
-                        break;
+    public function gettoken() {
+        $code = $_REQUEST['code'];
+        $client_id = $this->config->get('gocoin_gocoinmerchant');
+        $client_secret = $this->config->get('gocoin_gocoinsecretkey');
 
-                    case 'unpaid':
-                        $sts = $sts_failed; // Failed
-                        break;
-
-                    default:
-                        $sts = $sts_failed; // Failed
-                        break;
-                }
-                    
-                       
-                if ($sts == '') {
-                    $sts = '10';
-                }
-
-                if ($event == 'invoice_created') {
-                    $this->model_checkout_order->confirm($order_id, $sts);
-                    $this->model_payment_gocoin->addTransaction('payment',$iArray );
-                }
-          
-
-        if(isset($redirect_url) && $redirect_url!=''){
-            header("location: ".$redirect_url);
-            exit;
+        try {
+            $token = GoCoin::requestAccessToken($client_id, $client_secret, $code, null);
+            echo "<b>Copy this Access Token into your GoCoin Module: </b><br>" . $token;
+        } catch (Exception $e) {
+            echo "Problem in getting Token: " . $e->getMessage();
         }
-      }      
-      
-	}
- 
+        die();
+    }
+
+    public function getNotifyData() {
+        $post_data = file_get_contents("php://input");
+        if (!$post_data) {
+            $response = new stdClass();
+            $response->error = 'Post Data Error';
+            return $response;
+        }
+        $response = json_decode($post_data);
+        return $response;
+    }
+
+    private function _paymentStandard() {
+        $this->load->model('checkout/order');
+        $this->load->model('payment/gocoin');
+        $sts_processing = $this->model_payment_gocoin->getOrderStatus('Processing'); // Processing
+        $sts_failed = $this->model_payment_gocoin->getOrderStatus('Failed'); // Failed
+
+        $module_display = 'gocoin';
+        $response = $this->getNotifyData();
+        if (!$response) {
+            //======================Error=============================     
+        }
+        if (isset($response->error) && $response->error != '') {
+            
+        }
+        if (isset($response->payload)) {
+
+            //======================IF Response Get=============================     
+
+            $event = $response->event;
+            $order_id = (int) $response->payload->order_id;
+            $redirect_url = $response->payload->redirect_url;
+            $transction_id = $response->payload->id;
+            $total = $response->payload->base_price;
+            $status = $response->payload->status;
+            $currency_id = $response->payload->user_defined_1;
+            $secure_key = $response->payload->user_defined_2;
+            $currency = $response->payload->base_price_currency;
+            $currency_type = $response->payload->price_currency;
+            $invoice_time = $response->payload->created_at;
+            $expiration_time = $response->payload->expires_at;
+            $updated_time = $response->payload->updated_at;
+            $merchant_id = $response->payload->merchant_id;
+            $btc_price = $response->payload->price;
+            $price = $response->payload->base_price;
+            $url = "https://gateway.gocoin.com/merchant/" . $merchant_id . "/invoices/" . $transction_id;
+
+            //=================== Set To Array=====================================//
+            //Used for adding in db
+            $iArray = array(
+                'order_id' => $order_id,
+                'invoice_id' => $transction_id,
+                'url' => $url,
+                'status' => $event,
+                'btc_price' => $btc_price,
+                'price' => $price,
+                'currency' => $currency,
+                'currency_type' => $currency_type,
+                'invoice_time' => $invoice_time,
+                'expiration_time' => $expiration_time,
+                'updated_time' => $updated_time);
+
+
+            switch ($status) {
+                case 'paid':
+                    $sts = $sts_processing;
+                    break;
+
+                case 'unpaid':
+                    $sts = $sts_failed; // Failed
+                    break;
+
+                default:
+                    $sts = $sts_failed; // Failed
+                    break;
+            }
+
+
+            if ($sts == '') {
+                $sts = '10';
+            }
+
+            if ($event == 'invoice_created') {
+                $this->model_checkout_order->confirm($order_id, $sts);
+                $this->model_payment_gocoin->addTransaction('payment', $iArray);
+            }
+
+
+            if (isset($redirect_url) && $redirect_url != '') {
+                header("location: " . $redirect_url);
+                exit;
+            }
+        }
+    }
+
 }
 
 ?>

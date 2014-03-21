@@ -1,4 +1,4 @@
 <?php
 // Text
-$_['text_title'] = 'Cocoin';
+$_['text_title'] = 'GoCoin';
 ?>
