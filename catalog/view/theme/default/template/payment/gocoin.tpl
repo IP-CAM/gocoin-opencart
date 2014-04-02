@@ -37,6 +37,7 @@
       <td>
         <select name="gocoin_coincurrency">
             <option value="BTC">Bitcoin</option>
+            <option value="XDG">Dogecoin</option>
             <option value="LTC">Litecoin</option>
           <?php // } ?>
         </select>
