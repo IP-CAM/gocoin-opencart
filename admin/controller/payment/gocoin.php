@@ -155,15 +155,15 @@ class ControllerPaymentGocoin extends Controller {
 		}
 		
 		if (!$this->request->post['gocoin_gocoinmerchant']) {
-			$this->error['gocoinmerchant'] = $this->language->get('gocoinmerchant');
+			//$this->error['gocoinmerchant'] = $this->language->get('gocoinmerchant');
 		}
 
 		if (!$this->request->post['gocoin_gocoinsecretkey']) {
-			$this->error['gocoinsecretkey'] = $this->language->get('gocoinsecretkey');
+			//$this->error['gocoinsecretkey'] = $this->language->get('gocoinsecretkey');
 		}
 		
 		if (!$this->request->post['gocoin_gocointoken']) {
-			$this->error['gocointoken'] = $this->language->get('gocointoken');
+			//$this->error['gocointoken'] = $this->language->get('gocointoken');
 		}
 		
 		if (!$this->error) {

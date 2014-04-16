@@ -15,6 +15,7 @@ class ModelPaymentGocoin extends Model {
                 `invoice_time` datetime NOT NULL,
                 `expiration_time` datetime NOT NULL,
                 `updated_time` datetime NOT NULL,
+                `fingerprint` varchar(250) NOT NULL,
                 PRIMARY KEY (`id`)
               ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1";
         
@@ -51,23 +52,46 @@ class ModelPaymentGocoin extends Model {
     public function addTransaction($type = 'payment', $details){
       return $query = $this->db->query("
       INSERT INTO ".DB_PREFIX."gocoin_ipn (  order_id, invoice_id, url, status, btc_price,
-      price, currency, currency_type, invoice_time, expiration_time, updated_time)
+      price, currency, currency_type, invoice_time, expiration_time, updated_time,fingerprint)
       VALUES ( 
-          '".$details['order_id']."',
-          '".$details['invoice_id']."',
-          '".$details['url']."',
-          '".$details['status']."',
-          '".$details['btc_price']."',
-          '".$details['price']."',
-          '".$details['currency']."',
-          '".$details['currency_type']."',
-          '".$details['invoice_time']."',
-          '".$details['expiration_time']."',
-          '".$details['updated_time']."' )");
+          '".$this->db->escape($details['order_id'])."',
+          '".$this->db->escape($details['invoice_id'])."',
+          '".$this->db->escape($details['url'])."',
+          '".$this->db->escape($details['status'])."',
+          '".$this->db->escape($details['btc_price'])."',
+          '".$this->db->escape($details['price'])."',
+          '".$this->db->escape($details['currency'])."',
+          '".$this->db->escape($details['currency_type'])."',
+          '".$this->db->escape($details['invoice_time'])."',
+          '".$this->db->escape($details['expiration_time'])."',
+          '".$this->db->escape($details['updated_time'])."',
+          '".$this->db->escape($details['fingerprint'])."' )");
+    }
+    
+    public function getFPStatus($details){
+        $query = $this->db->query("SELECT invoice_id FROM " . DB_PREFIX . "gocoin_ipn where invoice_id = '".$this->db->escape($details['invoice_id'])."' and   
+            fingerprint = '".$this->db->escape($details['fingerprint'])."'       
+         ");
+        if(isset($query->num_rows) && $query->num_rows > 0){
+            if(isset($query->row['invoice_id'])) {
+                return $query->row['invoice_id'];
+            }
+        }
+    }
+    
+    function updateTransaction($type = 'payment', $details) {
+         return $query = $this->db->query("
+        update   ".DB_PREFIX."gocoin_ipn set 
+            status           = '".$this->db->escape($details['status'])."',   
+            updated_time     = '".$this->db->escape($details['updated_time'])."'      where
+            invoice_id       = '".$this->db->escape($details['invoice_id'])."' and   
+            order_id         = '".$this->db->escape($details['order_id'])."'       
+         ");
+
     }
     
     public function getOrderStatus($sts){
-        $query = $this->db->query("SELECT * FROM " . DB_PREFIX . "order_status WHERE name = '".$sts."' ");
+        $query = $this->db->query("SELECT * FROM " . DB_PREFIX . "order_status WHERE name = '".$this->db->escape($sts)."' ");
         if(isset($query->num_rows) && $query->num_rows > 0){
             if(isset($query->row['order_status_id'])) {
                 return $query->row['order_status_id'];

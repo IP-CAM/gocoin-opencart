@@ -19,14 +19,18 @@
           <tr>
             <td><?php echo $entry_gocoinmerchant; ?></td>
             <td><input type="text" name="gocoin_gocoinmerchant" id="gocoin_gocoinmerchant" value="<?php echo $gocoin_gocoinmerchant; ?>" />
+                <input type="hidden" name="cid" id="cid" value="<?php echo $gocoin_gocoinmerchant; ?>" />
               <?php if ($error_gocoinmerchant) { ?>
               <span class="error"><?php echo $error_gocoinmerchant; ?></span>
-              <?php } ?></td>
+              <?php } ?>
+               
+            </td>
           </tr>
           <tr>
             <td><?php echo $entry_gocoinsecretkey; ?></td>
             <td><input type="text" name="gocoin_gocoinsecretkey" id="gocoin_gocoinsecretkey" value="<?php echo $gocoin_gocoinsecretkey; ?>" />
-              <?php if ($error_gocoinsecretkey) { ?>
+              <input type="hidden" name="csec" id="csec" value="<?php echo $gocoin_gocoinsecretkey; ?>" />
+                <?php if ($error_gocoinsecretkey) { ?>
               <span class="error"><?php echo $error_gocoinsecretkey; ?></span>
               <?php } ?></td>
           </tr>
@@ -100,23 +104,32 @@
         var access_key = '<?php echo $entry_gocoinsecretkey; ?>';
         function get_api_token() 
         {
-                var client_id = document.getElementById('gocoin_gocoinmerchant').value;
-                var client_secret = document.getElementById('gocoin_gocoinsecretkey').value;
+                var client_id       = document.getElementById('gocoin_gocoinmerchant').value;
+                var client_secret   = document.getElementById('gocoin_gocoinsecretkey').value;
                 if (!client_id) {
-                    //alert('Please input '+mer_id+' !');
                     alert('Please input Client Id !');
                     return;
                 }
                 if (!client_secret) {
-                   // alert('Please input '+access_key+' !');
-                    alert('Please input Secret Key !');
+                   alert('Please input Secret Key !');
                     return;
                 }
+                var cid = document.getElementById('cid').value;
+                var csec = document.getElementById('csec').value;
+                
+                if (client_id  != cid || client_secret != csec) {
+                    alert('Please save changed Client Id and Client Secret Key first!');
+                    return;
+                }
+                
                 var currentUrl =  base+ 'index.php?route=payment/gocoin/gettoken';
+                
                 var url = "https://dashboard.gocoin.com/auth?response_type=code"
                             + "&client_id=" + client_id
                             + "&redirect_uri=" + currentUrl
                             + "&scope=user_read+merchant_read+invoice_read_write";
+                          
+                    
                 var strWindowFeatures = "location=yes,height=570,width=520,scrollbars=yes,status=yes";
                 var win = window.open(url, "_blank", strWindowFeatures);
                 return;
