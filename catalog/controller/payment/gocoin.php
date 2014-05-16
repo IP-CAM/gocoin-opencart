@@ -77,6 +77,8 @@ class ControllerPaymentGocoin extends Controller {
     public function processorder() {
         $this->load->model('checkout/order');
         $this->load->model('payment/gocoin');
+        $sts_pending = $this->model_payment_gocoin->getOrderStatus('Pending'); //pending
+
         $order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
         $coin_currency = $this->request->request['gocoin_coincurrency'];
 
@@ -170,6 +172,7 @@ class ControllerPaymentGocoin extends Controller {
                                 'updated_time' => $invoice->updated_at,
                                 'fingerprint' => $signature,
                             );
+                            $this->model_checkout_order->confirm($this->session->data['order_id'], $sts_pending,'Your Order status : Pending Waiting for payment confirmation ',true);
                             $this->model_payment_gocoin->addTransaction('payment', $json_array);
                         }
                     }
@@ -210,7 +213,8 @@ class ControllerPaymentGocoin extends Controller {
 
     public function getNotifyData() {
         $post_data = file_get_contents("php://input");
-        if (!$post_data) {
+        error_log('/******************************************************/ \n'.date('h:i:s A').file_get_contents("php://input").'\n',3,'tester.log');
+         if (!$post_data) {
             $response = new stdClass();
             $response->error = 'Post Data Error';
             return $response;
@@ -280,17 +284,17 @@ class ControllerPaymentGocoin extends Controller {
                 switch ($event) {
                     case 'invoice_created':
                     case 'invoice_payment_received':
-                        $sts = $sts_failed;
-                        $this->model_checkout_order->confirm($order_id, $sts);
-                        break;
+                       break;
                     case 'invoice_ready_to_ship':
+                  
                         $sts = $sts_processing;
-                        $this->model_checkout_order->confirm($order_id, $sts);
+                        if (($status == 'paid') || ($status == 'ready_to_ship')) {
+                             $this->model_checkout_order->update($order_id, $sts,'Your Order under Processing ',true);
+                        }
                         break;
                     default :
                         $sts = $sts_pending;
-                        $this->model_checkout_order->confirm($order_id, $sts);
-                        break;
+                       
                 }
             } elseif (!empty($fprint)) {
                 $msg = "\n Fingerprint : " . $fprint . " does not match for Order id :" . $order_id;

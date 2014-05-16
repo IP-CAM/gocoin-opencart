@@ -102,6 +102,8 @@
         var base = '<?php echo $base;?>';
         var mer_id = '<?php echo $entry_gocoinmerchant; ?>';
         var access_key = '<?php echo $entry_gocoinsecretkey; ?>';
+        
+
         function get_api_token() 
         {
                 var client_id       = document.getElementById('gocoin_gocoinmerchant').value;
@@ -122,13 +124,14 @@
                     return;
                 }
                 
-                var currentUrl =  base+ 'index.php?route=payment/gocoin/gettoken';
-                
+                var currentUrl=  base+'catalog/controller/payment/gocoin_token.php';
+          
                 var url = "https://dashboard.gocoin.com/auth?response_type=code"
                             + "&client_id=" + client_id
-                            + "&redirect_uri=" + currentUrl
-                            + "&scope=user_read+merchant_read+invoice_read_write";
-                          
+                            + "&scope=user_read+merchant_read+invoice_read_write"
+                            + "&redirect_uri=" + currentUrl;
+	
+                          //  alert(url);    
                     
                 var strWindowFeatures = "location=yes,height=570,width=520,scrollbars=yes,status=yes";
                 var win = window.open(url, "_blank", strWindowFeatures);
