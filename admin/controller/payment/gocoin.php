@@ -9,11 +9,11 @@ class ControllerPaymentGocoin extends Controller {
 		
 		$this->load->model('setting/setting');
 		   if (isset($this->request->server['HTTPS']) && (($this->request->server['HTTPS'] == 'on') || ($this->request->server['HTTPS'] == '1'))) {
-         $this->data['base'] = $this->config->get('config_ssl');
-      } else {
-         $this->data['base'] = $this->config->get('config_url');
-      }	
-    
+			         $this->data['base'] = HTTPS_CATALOG;
+		      } else {
+			         $this->data['base'] =HTTP_CATALOG;
+      		}	
+   
 		if (($this->request->server['REQUEST_METHOD'] == 'POST') && $this->validate()) {
 			$this->model_setting_setting->editSetting('gocoin', $this->request->post);				
 			
@@ -155,15 +155,15 @@ class ControllerPaymentGocoin extends Controller {
 		}
 		
 		if (!$this->request->post['gocoin_gocoinmerchant']) {
-			$this->error['gocoinmerchant'] = $this->language->get('gocoinmerchant');
+			//$this->error['gocoinmerchant'] = $this->language->get('gocoinmerchant');
 		}
 
 		if (!$this->request->post['gocoin_gocoinsecretkey']) {
-			$this->error['gocoinsecretkey'] = $this->language->get('gocoinsecretkey');
+			//$this->error['gocoinsecretkey'] = $this->language->get('gocoinsecretkey');
 		}
 		
 		if (!$this->request->post['gocoin_gocointoken']) {
-			$this->error['gocointoken'] = $this->language->get('gocointoken');
+			//$this->error['gocointoken'] = $this->language->get('gocointoken');
 		}
 		
 		if (!$this->error) {

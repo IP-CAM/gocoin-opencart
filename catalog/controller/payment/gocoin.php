@@ -1,6 +1,5 @@
 <?php
-
-include_once  DIR_SYSTEM . 'library/gocoinlib/src/GoCoin.php';
+include_once DIR_SYSTEM . 'library/gocoinlib/src/GoCoin.php';
 
 class ControllerPaymentGocoin extends Controller {
 
@@ -12,6 +11,8 @@ class ControllerPaymentGocoin extends Controller {
         $this->load->model('checkout/order');
 
         $order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
+        $this->data['action'] = $this->url->link('payment/gocoin/processorder', '', '');
+        
 
         $this->data['currency_code'] = $order_info['currency_code'];
         $this->data['total'] = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false);
@@ -74,10 +75,11 @@ class ControllerPaymentGocoin extends Controller {
     }
 
     public function processorder() {
-
         $this->load->model('checkout/order');
-        $order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
+        $this->load->model('payment/gocoin');
+        $sts_pending = $this->model_payment_gocoin->getOrderStatus('Pending'); //pending
 
+        $order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
         $coin_currency = $this->request->request['gocoin_coincurrency'];
 
         $customer_name = $order_info['payment_firstname'] . ' ' . $order_info['payment_lastname'];
@@ -108,35 +110,34 @@ class ControllerPaymentGocoin extends Controller {
 
 
         $options = array(
-            'price_currency' => $coin_currency,
-            'base_price' => $price,
-            'base_price_currency' => "USD", //$order_info['currency_code'],
-            'notification_level' => "all",
-            'callback_url' => $this->url->link('payment/gocoin/callback', '', ''),
-            'redirect_url' => $this->url->link('checkout/success', '', ''),
-            'order_id' => $this->session->data['order_id'],
-            'customer_name' => $customer_name,
-            'customer_address_1' => $customer_address_1,
-            'customer_address_2' => $customer_address_2,
-            'customer_city' => $customer_city,
-            'customer_region' => $customer_region,
-            'customer_postal_code' => $customer_postal_code,
-            'customer_country' => $customer_country,
-            'customer_phone' => $customer_phone,
-            'customer_email' => $customer_email,
+            'price_currency'        => $coin_currency,
+            'base_price'            => $price,
+            'base_price_currency'   => "USD",
+            'callback_url'          => $this->url->link('payment/gocoin/callback', '', ''),
+            'redirect_url'          => $this->url->link('checkout/success', '', ''),
+            'order_id'              => $this->session->data['order_id'],
+            'customer_name'         => $customer_name,
+            'customer_address_1'    => $customer_address_1,
+            'customer_address_2'    => $customer_address_2,
+            'customer_city'         => $customer_city,
+            'customer_region'       => $customer_region,
+            'customer_postal_code'  => $customer_postal_code,
+            'customer_country'      => $customer_country,
+            'customer_phone'        => $customer_phone,
+            'customer_email'        => $customer_email,
         );
-        //$data_string = json_encode($options);
 
-        $client_id = $this->config->get('gocoin_gocoinmerchant');
-        $client_secret = $this->config->get('gocoin_gocoinsecretkey');
-        $access_token = $this->config->get('gocoin_gocointoken');
-        $gocoin_url = $this->pay_url;
+        $key                        = $this->getGUID();
+        $signature                  = $this->getSignatureText($options, $key);
+        $options['user_defined_8']  = $signature;
+        $access_token               = $this->config->get('gocoin_gocointoken');
+        $gocoin_url                 = $this->pay_url;
 
-
+        
         $json = array();
         $result = 'error';
 
-        if (empty($client_id) || empty($client_secret) || empty($access_token)) {
+        if (empty($access_token)) {
             $result = 'error';
             $json['error'] = 'GoCoin Payment Paramaters not Set. Please report this to Site Administrator.';
         } else {
@@ -157,6 +158,22 @@ class ControllerPaymentGocoin extends Controller {
                             $result = 'success';
                             $messages = 'success';
                             $json['success'] = $url;
+                            $json_array = array(
+                                'order_id' => $invoice->order_id,
+                                'invoice_id' => $invoice->id,
+                                'url' => $url,
+                                'status' => 'invoice_created',
+                                'btc_price' => $invoice->price,
+                                'price' => $invoice->base_price,
+                                'currency' => $invoice->base_price_currency,
+                                'currency_type' => $invoice->price_currency,
+                                'invoice_time' => $invoice->created_at,
+                                'expiration_time' => $invoice->expires_at,
+                                'updated_time' => $invoice->updated_at,
+                                'fingerprint' => $signature,
+                            );
+                            $this->model_checkout_order->confirm($this->session->data['order_id'], $sts_pending,'Your Order status : Pending Waiting for payment confirmation ',true);
+                            $this->model_payment_gocoin->addTransaction('payment', $json_array);
                         }
                     }
                 } else {
@@ -176,8 +193,12 @@ class ControllerPaymentGocoin extends Controller {
         $this->_paymentStandard();
     }
 
+    public function success() {
+        
+    }
+
     public function gettoken() {
-        $code = $_REQUEST['code'];
+        $code = isset($_REQUEST['code']) && !empty($_REQUEST['code'])? $_REQUEST['code']:'';
         $client_id = $this->config->get('gocoin_gocoinmerchant');
         $client_secret = $this->config->get('gocoin_gocoinsecretkey');
 
@@ -192,7 +213,8 @@ class ControllerPaymentGocoin extends Controller {
 
     public function getNotifyData() {
         $post_data = file_get_contents("php://input");
-        if (!$post_data) {
+        error_log('/******************************************************/ \n'.date('h:i:s A').file_get_contents("php://input").'\n',3,'tester.log');
+         if (!$post_data) {
             $response = new stdClass();
             $response->error = 'Post Data Error';
             return $response;
@@ -206,6 +228,7 @@ class ControllerPaymentGocoin extends Controller {
         $this->load->model('payment/gocoin');
         $sts_processing = $this->model_payment_gocoin->getOrderStatus('Processing'); // Processing
         $sts_failed = $this->model_payment_gocoin->getOrderStatus('Failed'); // Failed
+        $sts_pending = $this->model_payment_gocoin->getOrderStatus('Pending'); //pending
 
         $module_display = 'gocoin';
         $response = $this->getNotifyData();
@@ -236,7 +259,7 @@ class ControllerPaymentGocoin extends Controller {
             $btc_price = $response->payload->price;
             $price = $response->payload->base_price;
             $url = "https://gateway.gocoin.com/merchant/" . $merchant_id . "/invoices/" . $transction_id;
-
+            $fprint = $response->payload->user_defined_8;
             //=================== Set To Array=====================================//
             //Used for adding in db
             $iArray = array(
@@ -250,39 +273,87 @@ class ControllerPaymentGocoin extends Controller {
                 'currency_type' => $currency_type,
                 'invoice_time' => $invoice_time,
                 'expiration_time' => $expiration_time,
-                'updated_time' => $updated_time);
+                'updated_time' => $updated_time,
+                'fingerprint' => $fprint);
 
+            $i_id = $this->model_payment_gocoin->getFPStatus($iArray);
+            if (!empty($i_id) && $i_id == $transction_id) {
 
-            switch ($status) {
-                case 'paid':
-                    $sts = $sts_processing;
-                    break;
+                $this->model_payment_gocoin->updateTransaction('payment', $iArray);
 
-                case 'unpaid':
-                    $sts = $sts_failed; // Failed
-                    break;
-
-                default:
-                    $sts = $sts_failed; // Failed
-                    break;
-            }
-
-
-            if ($sts == '') {
-                $sts = '10';
-            }
-
-            if ($event == 'invoice_created') {
-                $this->model_checkout_order->confirm($order_id, $sts);
-                $this->model_payment_gocoin->addTransaction('payment', $iArray);
-            }
-
-
-            if (isset($redirect_url) && $redirect_url != '') {
-                header("location: " . $redirect_url);
-                exit;
+                switch ($event) {
+                    case 'invoice_created':
+                    case 'invoice_payment_received':
+                       break;
+                    case 'invoice_ready_to_ship':
+                  
+                        $sts = $sts_processing;
+                        if (($status == 'paid') || ($status == 'ready_to_ship')) {
+                             $this->model_checkout_order->update($order_id, $sts,'Your Order under Processing ',true);
+                        }
+                        break;
+                    default :
+                        $sts = $sts_pending;
+                       
+                }
+            } elseif (!empty($fprint)) {
+                $msg = "\n Fingerprint : " . $fprint . " does not match for Order id :" . $order_id;
+                error_log($msg, 3, 'gocoin_error_log.txt');
+            } else {
+                $msg = "\n No Fingerprint received for with Order id :" . $order_id;
+                error_log($msg, 3, 'gocoin_error_log.txt');
             }
         }
+    }
+
+    public function getGUID() {
+        if (function_exists('com_create_guid')) {
+            $guid = com_create_guid();
+            $guid = str_replace("{", "", $guid);
+            $guid = str_replace("}", "", $guid);
+            return $guid;
+        } else {
+            mt_srand((double) microtime() * 10000); //optional for php 4.2.0 and up.
+            $charid = strtoupper(md5(uniqid(rand(), true)));
+            $hyphen = chr(45); // "-"
+            $uuid = substr($charid, 0, 8) . $hyphen
+                    . substr($charid, 8, 4) . $hyphen
+                    . substr($charid, 12, 4) . $hyphen
+                    . substr($charid, 16, 4) . $hyphen
+                    . substr($charid, 20, 12); // .chr(125) //"}"
+            return $uuid;
+        }
+    }
+
+    public function getSignatureText($data, $uniquekey) {
+        $query_str = '';
+        $include_params = array('price_currency', 'base_price', 'base_price_currency', 'order_id', 'customer_name', 'customer_city', 'customer_region', 'customer_postal_code', 'customer_country', 'customer_phone', 'customer_email');
+        if (is_array($data)) {
+            ksort($data);
+            $querystring = "";
+            foreach ($data as $k => $v) {
+                if (in_array($k, $include_params)) {
+                    $querystring = $querystring . $k . "=" . $v . "&";
+                }
+            }
+        } else {
+            if (isset($data->payload)) {
+                $payload_obj = $data->payload;
+                $payload_arr = get_object_vars($payload_obj);
+                ksort($payload_arr);
+                $querystring = "";
+                foreach ($payload_arr as $k => $v) {
+                    if (in_array($k, $include_params)) {
+                        $querystring = $querystring . $k . "=" . $v . "&";
+                    }
+                }
+            }
+        }
+        $query_str = substr($querystring, 0, strlen($querystring) - 1);
+        $query_str = strtolower($query_str);
+        $hash2 = hash_hmac("sha256", $query_str, $uniquekey, true);
+        $hash2_encoded = base64_encode($hash2);
+        return $hash2_encoded;
     }
 
 }
