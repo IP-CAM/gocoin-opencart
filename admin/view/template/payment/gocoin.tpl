@@ -8,6 +8,21 @@
   <?php if ($error_warning) { ?>
   <div class="warning"><?php echo $error_warning; ?></div>
   <?php } ?>
+<?php 
+   
+   if (version_compare(PHP_VERSION, '5.3.0') >= 0) {
+          $php_version_allowed = true ;
+   }
+   else{
+          $php_version_allowed = false ;
+   }
+   
+   if($php_version_allowed ==false){
+      echo "<div class='warning'>  The minimum PHP version required for GoCoin plugin is 5.3.0</div>";
+    }
+   else {
+?>
+
   <div class="box">
     <div class="heading">
       <h1><img src="view/image/gocoinlogo.png" alt="" /> <?php echo $heading_title; ?></h1>
@@ -97,6 +112,7 @@
       </form>
     </div>
   </div>
+  <?php } ?>
 </div>
     <script type="text/javascript">
         var base = '<?php echo $base;?>';
@@ -128,7 +144,7 @@
           
                 var url = "https://dashboard.gocoin.com/auth?response_type=code"
                             + "&client_id=" + client_id
-                            + "&scope=user_read+merchant_read+invoice_read_write"
+                            + "&scope=user_read+invoice_read_write"
                             + "&redirect_uri=" + currentUrl;
 	
                           //  alert(url);    

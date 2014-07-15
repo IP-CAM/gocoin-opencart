@@ -1,3 +1,16 @@
+<?php 
+   if (version_compare(PHP_VERSION, '5.3.0') >= 0) {
+          $php_version_allowed = true ;
+   }
+   else{
+          $php_version_allowed = false ;
+   }
+   
+   if($php_version_allowed ==false){
+      echo "<div class='warning'>  The minimum PHP version required for GoCoin plugin is 5.3.0</div>";
+    }
+    else{
+    ?>
 <form action="<?php echo $action; ?>" method="post">
 	
   <input type="hidden" name="total" value="<?php echo $total; ?>" />
@@ -51,6 +64,7 @@
     </div>
   </div>
 </form>
+    <?php }?>
 <script type="text/javascript"><!--
 $('#button-confirm').bind('click', function() {
 	$.ajax({
