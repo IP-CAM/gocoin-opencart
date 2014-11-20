@@ -1,16 +1,3 @@
-<?php 
-   if (version_compare(PHP_VERSION, '5.3.0') >= 0) {
-          $php_version_allowed = true ;
-   }
-   else{
-          $php_version_allowed = false ;
-   }
-   
-   if($php_version_allowed ==false){
-      echo "<div class='warning'>  The minimum PHP version required for GoCoin plugin is 5.3.0</div>";
-    }
-    else{
-    ?>
 <form action="<?php echo $action; ?>" method="post">
 	
   <input type="hidden" name="total" value="<?php echo $total; ?>" />
@@ -41,30 +28,14 @@
   <input type="hidden" name="demo" value="<?php echo $demo; ?>" />
   <?php } ?>
   <input type="hidden" name="lang" value="<?php echo $lang; ?>" />
-  <input type="hidden" name="return_url" value="<?php echo $return_url; ?>" />
-  <input type="hidden" name="currency_code" value="<?php echo $currency_code; ?>" />
-  <div class="content" id="payment">
-  	<table class="form">
-    <tr>
-      <td>Select Coin Currency:</td>
-      <td>
-        <select name="gocoin_coincurrency">
-            <option value="BTC">Bitcoin</option>
-            <option value="XDG">Dogecoin</option>
-            <option value="LTC">Litecoin</option>
-          <?php // } ?>
-        </select>
-      </td>
-    </tr>
-  </table>
-  </div>
+  
   <div class="buttons">
     <div class="right">
+       <div id="payment_result_loading"></div> 
       <input type="button" id="button-confirm" value="<?php echo $button_confirm; ?>" class="button" />
     </div>
   </div>
 </form>
-    <?php }?>
 <script type="text/javascript"><!--
 $('#button-confirm').bind('click', function() {
 	$.ajax({
@@ -74,18 +45,18 @@ $('#button-confirm').bind('click', function() {
 		dataType: 'json',		
 		beforeSend: function() {
 			$('#button-confirm').attr('disabled', true);
-			$('#payment').before('<div class="attention"><img src="catalog/view/theme/default/image/loading.gif" alt="" /> Loading...</div>');
+			$('#payment_result_loading').html('<div class="attention"><img src="catalog/view/theme/default/image/loading.gif" alt="" /> Loading...</div>');
 		},
 		complete: function() {
 			$('#button-confirm').attr('disabled', false);
 			$('.attention').remove();
-		},				
-		success: function(json) {
+            $('#payment_result_loading').html('');
+		},
+        success: function(json) {
 			if (json['error']) {
 				alert(json['error']);
 			}
-			
-			if (json['success']) {
+			else if (json['success']) {
 				window.location = json['success'];
 			}
 		}

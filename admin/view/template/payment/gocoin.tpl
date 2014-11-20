@@ -7,22 +7,7 @@
   </div>
   <?php if ($error_warning) { ?>
   <div class="warning"><?php echo $error_warning; ?></div>
-  <?php } ?>
-<?php 
-   
-   if (version_compare(PHP_VERSION, '5.3.0') >= 0) {
-          $php_version_allowed = true ;
-   }
-   else{
-          $php_version_allowed = false ;
-   }
-   
-   if($php_version_allowed ==false){
-      echo "<div class='warning'>  The minimum PHP version required for GoCoin plugin is 5.3.0</div>";
-    }
-   else {
-?>
-
+  <?php } else{ ?>
   <div class="box">
     <div class="heading">
       <h1><img src="view/image/gocoinlogo.png" alt="" /> <?php echo $heading_title; ?></h1>
@@ -49,13 +34,7 @@
               <span class="error"><?php echo $error_gocoinsecretkey; ?></span>
               <?php } ?></td>
           </tr>
-          <tr>
-            <td><?php echo $entry_gocointoken; ?></td>
-            <td><input type="text" name="gocoin_gocointoken" value="<?php echo $gocoin_gocointoken; ?>" />
-              <?php if ($error_gocointoken) { ?>
-              <span class="error"><?php echo $error_gocointoken; ?></span>
-              <?php } ?></td>
-          </tr>       
+         
           <tr>
             <td><?php echo $entry_order_status; ?></td>
             <td><select name="gocoin_order_status_id">
@@ -98,60 +77,12 @@
             <td><input type="text" name="gocoin_sort_order" value="<?php echo $gocoin_sort_order; ?>" size="1" /></td>
           </tr>
           
-          <tr>
-            <td colspan='2'>
-                  <div style="margin-top:5px;"> 
-                    <span class="notice">you can click button to get access token from gocoin.com</span>
-                    <button id="btn_get_token" title="Get API Token" class="scalable " onclick="get_api_token(); return false;" style="">
-                        <span><span><span>Get API Token</span></span></span>
-                    </button>
-                </div>
-            </td>
-          </tr>
+           
         </table>
       </form>
     </div>
   </div>
-  <?php } ?>
+  <?php }?>
 </div>
-    <script type="text/javascript">
-        var base = '<?php echo $base;?>';
-        var mer_id = '<?php echo $entry_gocoinmerchant; ?>';
-        var access_key = '<?php echo $entry_gocoinsecretkey; ?>';
-        
-
-        function get_api_token() 
-        {
-                var client_id       = document.getElementById('gocoin_gocoinmerchant').value;
-                var client_secret   = document.getElementById('gocoin_gocoinsecretkey').value;
-                if (!client_id) {
-                    alert('Please input Client Id !');
-                    return;
-                }
-                if (!client_secret) {
-                   alert('Please input Secret Key !');
-                    return;
-                }
-                var cid = document.getElementById('cid').value;
-                var csec = document.getElementById('csec').value;
-                
-                if (client_id  != cid || client_secret != csec) {
-                    alert('Please save changed Client Id and Client Secret Key first!');
-                    return;
-                }
-                
-                var currentUrl=  base+'catalog/controller/payment/gocoin_token.php';
-          
-                var url = "https://dashboard.gocoin.com/auth?response_type=code"
-                            + "&client_id=" + client_id
-                            + "&scope=user_read+invoice_read_write"
-                            + "&redirect_uri=" + currentUrl;
-	
-                          //  alert(url);    
-                    
-                var strWindowFeatures = "location=yes,height=570,width=520,scrollbars=yes,status=yes";
-                var win = window.open(url, "_blank", strWindowFeatures);
-                return;
-            }
-    </script>
+    
 <?php echo $footer; ?>
