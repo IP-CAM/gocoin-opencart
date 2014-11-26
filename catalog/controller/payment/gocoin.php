@@ -126,7 +126,7 @@ class ControllerPaymentGocoin extends Controller {
         
         
         if (empty($access_token)) {
-                  $msg = 'Improper Gateway set up. Access token not found.';
+                  $msg = 'Improper Gateway set up. API Key not found.';
                   $json['error'] = $msg;
                   $this->model_payment_gocoin->log($msg);
         }
@@ -256,7 +256,9 @@ class ControllerPaymentGocoin extends Controller {
                   $msg = 'Order ' . $order_id .' is underpaid.';
                   break;
               }
-              $msg .= ' Event ID: '. $event_id;   
+              
+              $msg .=" Price (Currency)  : ".  $invoice->price."(". $invoice->price_currency.")"; 
+              $msg .= ' Event ID: '. $event_id;    
               $this->model_checkout_order->update($order_id,$sts_processing,'Your Order Status: Processing(awaiting payment confirmation) ',true);
               $this->model_payment_gocoin->log($msg);
               
@@ -264,6 +266,7 @@ class ControllerPaymentGocoin extends Controller {
 
             case 'invoice_merchant_review':
                 $msg = 'Order ' . $order_id .' is under review. Action must be taken from the GoCoin Dashboard.';
+                $msg .=" Price (Currency)  : ".  $invoice->price."(". $invoice->price_currency.")"; 
                 $msg .= ' Event ID: '. $event_id;  
                  
                 $this->model_checkout_order->update($order_id,$sts_processing,'Your Order Status:  Processing(awaiting payment confirmation) ',true);
@@ -272,6 +275,7 @@ class ControllerPaymentGocoin extends Controller {
 
             case 'invoice_ready_to_ship':
               $msg = 'Order ' . $order_id .' has been paid in full and confirmed on the blockchain.';
+              $msg .=" Price (Currency)  : ".  $invoice->price."(". $invoice->price_currency.")"; 
               $msg .= ' Event ID: '. $event_id;  
                
                 $this->model_checkout_order->update($order_id,$sts_processed,'Your Order Status:  Processed',true);
@@ -281,6 +285,7 @@ class ControllerPaymentGocoin extends Controller {
 
             case 'invoice_invalid':
                 $msg = 'Order ' . $order_id . ' is invalid and will not be confirmed on the blockchain.';
+                $msg .=" Price (Currency)  : ".  $invoice->price."(". $invoice->price_currency.")"; 
                 $msg .= ' Event ID: '. $event_id;  
                 $this->model_checkout_order->update($order_id,$sts_failed,'Your Order Status:  Failed',true);
                 $this->model_payment_gocoin->log($msg);
