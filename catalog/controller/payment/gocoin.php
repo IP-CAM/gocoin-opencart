@@ -3,7 +3,7 @@ include_once DIR_SYSTEM . 'library/gocoinlib/src/GoCoin.php';
 
 class ControllerPaymentGocoin extends Controller {
 
-    var $pay_url = 'https://gateway.gocoin.com/merchant/';
+    //var $pay_url = 'https://gateway.gocoin.com/merchant/';
 
     protected function index() {
         $this->data['button_confirm'] = $this->language->get('button_confirm');
