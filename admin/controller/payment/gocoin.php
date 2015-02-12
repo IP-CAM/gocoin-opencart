@@ -41,6 +41,15 @@ class ControllerPaymentGocoin extends Controller {
 		$this->data['button_save'] = $this->language->get('button_save');
 		$this->data['button_cancel'] = $this->language->get('button_cancel');
 		 
+        
+        if (version_compare(PHP_VERSION, '5.3.0') >= 0) {
+           $php_version_allowed = true ;
+         }
+        else{
+          $php_version_allowed = false ;
+          $this->error['warning'] = 'The minimum PHP version required for GoCoin plugin is 5.3.0';
+        }
+        
 		if (isset($this->error['warning'])) {
 			$this->data['error_warning'] = $this->error['warning'];
 		} else {
@@ -100,13 +109,7 @@ class ControllerPaymentGocoin extends Controller {
 		} else {
 			$this->data['gocoin_gocoinsecretkey'] = $this->config->get('gocoin_gocoinsecretkey');
 		}
-
-		if (isset($this->request->post['gocoin_gocointoken'])) {
-			$this->data['gocoin_gocointoken'] = $this->request->post['gocoin_gocointoken'];
-		} else {
-			$this->data['gocoin_gocointoken'] = $this->config->get('gocoin_gocointoken');
-		}
-		
+ 
 				
 		if (isset($this->request->post['gocoin_order_status_id'])) {
 			$this->data['gocoin_order_status_id'] = $this->request->post['gocoin_order_status_id'];
@@ -155,15 +158,11 @@ class ControllerPaymentGocoin extends Controller {
 		}
 		
 		if (!$this->request->post['gocoin_gocoinmerchant']) {
-			//$this->error['gocoinmerchant'] = $this->language->get('gocoinmerchant');
+			$this->error['gocoinmerchant'] = $this->language->get('entry_gocoinmerchant');
 		}
 
 		if (!$this->request->post['gocoin_gocoinsecretkey']) {
-			//$this->error['gocoinsecretkey'] = $this->language->get('gocoinsecretkey');
-		}
-		
-		if (!$this->request->post['gocoin_gocointoken']) {
-			//$this->error['gocointoken'] = $this->language->get('gocointoken');
+			$this->error['gocoinsecretkey'] = $this->language->get('entry_gocoinsecretkey');
 		}
 		
 		if (!$this->error) {

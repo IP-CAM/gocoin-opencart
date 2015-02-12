@@ -28,25 +28,10 @@
   <input type="hidden" name="demo" value="<?php echo $demo; ?>" />
   <?php } ?>
   <input type="hidden" name="lang" value="<?php echo $lang; ?>" />
-  <input type="hidden" name="return_url" value="<?php echo $return_url; ?>" />
-  <input type="hidden" name="currency_code" value="<?php echo $currency_code; ?>" />
-  <div class="content" id="payment">
-  	<table class="form">
-    <tr>
-      <td>Select Coin Currency:</td>
-      <td>
-        <select name="gocoin_coincurrency">
-            <option value="BTC">Bitcoin</option>
-            <option value="XDG">Dogecoin</option>
-            <option value="LTC">Litecoin</option>
-          <?php // } ?>
-        </select>
-      </td>
-    </tr>
-  </table>
-  </div>
+  
   <div class="buttons">
     <div class="right">
+       <div id="payment_result_loading"></div> 
       <input type="button" id="button-confirm" value="<?php echo $button_confirm; ?>" class="button" />
     </div>
   </div>
@@ -60,18 +45,18 @@ $('#button-confirm').bind('click', function() {
 		dataType: 'json',		
 		beforeSend: function() {
 			$('#button-confirm').attr('disabled', true);
-			$('#payment').before('<div class="attention"><img src="catalog/view/theme/default/image/loading.gif" alt="" /> Loading...</div>');
+			$('#payment_result_loading').html('<div class="attention"><img src="catalog/view/theme/default/image/loading.gif" alt="" /> Loading...</div>');
 		},
 		complete: function() {
 			$('#button-confirm').attr('disabled', false);
 			$('.attention').remove();
-		},				
-		success: function(json) {
+            $('#payment_result_loading').html('');
+		},
+        success: function(json) {
 			if (json['error']) {
 				alert(json['error']);
 			}
-			
-			if (json['success']) {
+			else if (json['success']) {
 				window.location = json['success'];
 			}
 		}
